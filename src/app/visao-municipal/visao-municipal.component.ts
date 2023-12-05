@@ -7,7 +7,12 @@ import { MunicipioSegmentoService } from '../service/municipio-segmento.service'
 import { MunicipioSegmento } from 'src/util/MunicipioSegmento';
 import {changeset} from 'vega'
 
-type MunicipioTotal = {codMunicipio: string, dscMunicipio: string, dscRegiao:any[], segmento:any[], valorTotal: number};
+type MunicipioTotal = {
+  codMunicipio: string, dscMunicipio: string, 
+  dscRegiao:any[], segmento:any[], 
+  qtdeNotas:number, 
+  valorTotal: number
+};
 
 @Component({
   selector: 'app-visao-municipal',
@@ -234,10 +239,12 @@ export class VisaoMunicipalComponent implements OnInit  {
               name:'municipioAgregado'
             }, 
             key: "codMunicipio",
-            fields: ["dscMunicipio" ,"valorTotal", "dscRegiao", "segmento"]
+            fields: ["dscMunicipio", "qtdeNotas", "valorTotal", "dscRegiao", "segmento"]
           },
           default: 'NA'
-        }
+        },
+        {calculate: "datum.dscMunicipio!='NA'?datum.qtdeNotas:0", as: "qtdeNotas"},
+        {calculate: "datum.dscMunicipio!='NA'?datum.valorTotal:0", as: "valorTotal"}
       ],
       layer:[
         {
@@ -284,6 +291,7 @@ export class VisaoMunicipalComponent implements OnInit  {
             },    
             tooltip: [
               {field:"dscMunicipio", title: "Município"},
+              {field:"qtdeNotas", format:",.0f", title: "Qtde de Notas"},
               {field:"valorTotal", format:",.2f", title: "Total de Notas"}
             ]
           }
@@ -311,6 +319,8 @@ export class VisaoMunicipalComponent implements OnInit  {
             },
             tooltip: [
               {title: "Município", field:"properties.name"},
+              {title: "Qtde Notas", field:"qtdeNotas"},
+              {title: "Valor Total", field:"valorTotal"}
             ]
           }
         },     
@@ -341,6 +351,15 @@ export class VisaoMunicipalComponent implements OnInit  {
           window: [{
             op: "sum",
             field: "valorTotal",
+            as: "qtdeNotasRegiao"
+          }],
+          groupby: [colorField],
+          frame: [null, null]
+        },
+        {
+          window: [{
+            op: "sum",
+            field: "valorTotal",
             as: "valorTotalRegiao"
           }],
           groupby: [colorField],
@@ -360,7 +379,7 @@ export class VisaoMunicipalComponent implements OnInit  {
         }
       ],
       encoding:{
-        theta: {field: "valorTotal", aggregate:"sum", type: "quantitative", stack: "normalize"},
+        theta: {field: "valorTotal", aggregate:"sum", type: "quantitative", stack: "normalize", title: "Valor Total"},
         order: {field:"valorTotal", aggregate:"sum", type:"quantitative", sort: "descending"},
         color: {
           field: colorField, 
@@ -368,7 +387,13 @@ export class VisaoMunicipalComponent implements OnInit  {
           title:"Região", 
           sort:{field:"valorTotal",order:"descending"},
           scale:{domain:['Nordeste','Norte','Sul','Sudeste','Centro-Oeste'], range:['#4c78a8','#f58518', '#e45756', '#72b7b2', '#54a24b']},
-        }
+        },
+        tooltip:[
+          {field: colorField, title:"Região"},
+          {field: "qtdeNotas", aggregate:'sum', format:',.0f', title:"Qtde Notas"},
+          {field: "valorTotal", aggregate:'sum', format:',.2f', title:"Valor Total"},
+          {field: "percentualTotalRegiao", aggregate:'min', format:'.0%', title:"Percentual"},
+        ]
       },
       layer:[
         {
@@ -487,6 +512,7 @@ export class VisaoMunicipalComponent implements OnInit  {
           },
           tooltip: [
             {field: segmentoField, title: "Segmento Econômico"},
+            {aggregate: "sum", field: "qtdeNotas", format:",.0f", title: "Qtde Notas"},
             {aggregate: "sum", field: "valorTotal", format:",.2f", title: "Total de Notas"}
           ],
         }
@@ -578,7 +604,8 @@ export class VisaoMunicipalComponent implements OnInit  {
           });
 
         if (municipio_filter.length > 0){
-          
+
+          municipio_filter[0].qtdeNotas+=(this.isMunicipioAtendeFiltro(currentValue)?currentValue.qtdeNotas:0);
           municipio_filter[0].valorTotal+=(this.isMunicipioAtendeFiltro(currentValue)?currentValue.valorTotal:0);
           municipio_filter[0].valorTotal = Math.round(municipio_filter[0].valorTotal*100)/100
         
@@ -589,6 +616,7 @@ export class VisaoMunicipalComponent implements OnInit  {
             dscMunicipio: (currentValue as any)[fieldDscMunicipio], 
             dscRegiao: (this.regiaoSelecionada.length>0)?this.regiaoSelecionada:['Todas'], 
             segmento: (this.segmentoSelecionado.length>0)?this.segmentoSelecionado:['Todos'],
+            qtdeNotas: this.isMunicipioAtendeFiltro(currentValue)?currentValue.qtdeNotas:0,
             valorTotal:Math.round((this.isMunicipioAtendeFiltro(currentValue)?currentValue.valorTotal:0)*100)/100
           };
 

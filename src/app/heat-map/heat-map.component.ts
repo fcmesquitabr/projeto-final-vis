@@ -246,6 +246,7 @@ export class HeatMapComponent implements OnInit {
             tooltip:[
               {field: xField, type: "nominal", title: xAxisTitle},
               {field: yField, type: "nominal", title: yAxisTitle},
+              {aggregate: "sum", field: "qtdeNotas", format:",.2f", title: "Qtde de Notas"},
               {aggregate: "sum", field: "valorTotal", format:",.2f", title: "Valor Total"},
             ]
           }              

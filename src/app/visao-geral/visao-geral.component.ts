@@ -298,7 +298,8 @@ export class VisaoGeralComponent {
         },
         tooltip: [
           {field: tooltipDescField, title: "UF"},
-          {field: "valorTotal", aggregate:'sum', format:",.2f", title: "Valor Total Emitidos"}
+          {field: "qtdeNotas", aggregate:'sum', format:",.0f", title: "Qtde de Notas"},
+          {field: "valorTotal", aggregate:'sum', format:",.2f", title: "Valor Total"}
         ]
       },          
       width: 380,
