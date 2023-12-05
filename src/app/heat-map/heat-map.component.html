@@ -1,0 +1,38 @@
+<p-fieldset legend="Saídas Interestaduais" [toggleable]="true">
+    <table style="margin-bottom: 30px;">
+        <tr>
+            <td style="width: 300px;">
+                <div class="card flex justify-content-center">
+                    UF: <p-dropdown [options]="ufSaidaList" (onChange)="trocarUfSaida($event)" [(ngModel)]="ufSaidaSelecionada" optionLabel="nome"></p-dropdown>
+                </div>            
+            </td>
+            <td>
+                <div class="card flex justify-content-center">
+                    Segmento: <p-dropdown [options]="segmentoSaidaList" (onChange)="trocarSegmentoSaida($event)" [(ngModel)]="segmentoSaidaSelecionado"></p-dropdown>
+                </div>            
+            </td>
+        </tr>
+    </table>
+    <div id="heat-map-saida"></div>
+    <div id="top-cnpj-emit"></div>
+</p-fieldset>
+
+<p-fieldset legend="Entradas Interestaduais" [toggleable]="true">
+    <table style="margin-bottom: 30px;">
+        <tr>
+            <td style="width: 300px;">
+                <div class="card flex justify-content-center">
+                    UF: <p-dropdown [options]="ufEntradaList" (onChange)="trocarUfEntrada($event)" [(ngModel)]="ufEntradaSelecionada" optionLabel="nome"></p-dropdown>
+                </div>            
+            </td>
+            <td>
+                <div class="card flex justify-content-center">
+                    Segmento: <p-dropdown [options]="segmentoEntradaList" (onChange)="trocarSegmentoEntrada($event)" [(ngModel)]="segmentoEntradaSelecionado"></p-dropdown>
+                </div>            
+            </td>
+        </tr>
+    </table>
+
+    <div id="heat-map-entrada"></div>
+    <div id="top-cnpj-dest"></div>
+</p-fieldset>

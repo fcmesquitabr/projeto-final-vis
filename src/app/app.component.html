@@ -1,0 +1,29 @@
+<p-panel [collapsed]="false" [toggleable]="true">
+  <ng-template pTemplate="header">
+    <span style="text-align: center; font-weight: bold;">Dashboard Notas Fiscais Eletrônicas (NF-e)</span>
+  </ng-template>
+  <p>
+      Esse Dashboard visa apresentar informações sobre a circulação de NF-e no Estado do Ceará
+  </p>
+</p-panel>
+
+<p-tabView>
+
+  <p-tabPanel header="Visão Geral">
+    <app-visao-geral></app-visao-geral>
+  </p-tabPanel>
+
+  <p-tabPanel header="Visão UF x Segmento">
+    <app-heat-map></app-heat-map>
+  </p-tabPanel>
+
+  <p-tabPanel header="Visão Municipal">
+    <app-visao-municipal></app-visao-municipal>
+  </p-tabPanel>
+
+  <p-tabPanel header="Produtos">
+    <app-visao-produto></app-visao-produto>
+  </p-tabPanel>
+
+</p-tabView>
+
