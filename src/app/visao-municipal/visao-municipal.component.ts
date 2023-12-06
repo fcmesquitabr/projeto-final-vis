@@ -471,6 +471,13 @@ export class VisaoMunicipalComponent implements OnInit  {
           }],
           sort:[{field:'valorTotalSegmento', order:'descending'}],
         },
+        {
+          joinaggregate: [{
+            op: "max",
+            field: "valorTotalSegmento",
+            as: "maxValorTotalSegmento"
+          }]
+        },
       ],
       encoding: {  
         x: {field: 'valorTotalSegmento', type: 'quantitative', title:'Total de Notas', stack: null},                
@@ -523,7 +530,7 @@ export class VisaoMunicipalComponent implements OnInit  {
           baseline:"middle", 
           fontWeight:"bold",
           align:"left", 
-          xOffset: {expr:"datum.rankSegmento<=3?-35:5"}, 
+          xOffset: {expr:"(datum.valorTotalSegmento/datum.maxValorTotalSegmento)>0.6?-35:5"}, 
           aria: false
         },
         encoding: {
@@ -533,10 +540,7 @@ export class VisaoMunicipalComponent implements OnInit  {
             format:".2s",
           },
           color:{
-            condition:{
-              test:{field:"rankSegmento", lte:"3.0"},
-              value:'white'
-            },
+            condition:{test:"(datum.valorTotalSegmento/datum.maxValorTotalSegmento)>0.6", value:'white'},
             value:"black"
           }
         },

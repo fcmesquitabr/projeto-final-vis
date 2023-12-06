@@ -136,47 +136,97 @@ export class VisaoProdutoComponent implements OnInit{
           }],
           sort:[{field:'valorTotalProduto', order:'descending'}]
         },
-        {filter: { field: 'rankProduto', lte: 20}}
-      ],      
-      params: [
+        {filter: { field: 'rankProduto', lte: 20}},
         {
-          name: "highlightBarProduto",
-          select: {type: "point", on: "pointerover"}
+          window: [{
+            op: "row_number",
+            as: "rowNumber"
+          }],
+          groupby:['rankProduto'],
+          sort:[{field:'valorTotalProduto', order:'descending'}]
         },
-        {name: "selectBarProduto", select: {type:"point", encodings:['y']}},
-      ],        
-      mark: {type:'bar', cornerRadiusEnd: 5, stroke: "black", height: 20},
+        {filter: { field: 'rowNumber', equal: 1}},
+        {
+          joinaggregate: [{
+            op: "max",
+            field: "valorTotalProduto",
+            as: "maxValorTotalProduto"
+          }]
+        },
+        {
+          calculate:"(datum.valorTotalProduto/datum.maxValorTotalProduto)>0.6?-35:5", as:"xOffSet"
+        }        
+      ],
       encoding: {          
-        x: {field: 'valorTotalProduto', aggregate:'max', type: 'quantitative', title:'Total dos Produtos', stack: null},                
-        y: {field: 'codNcm2', type: 'nominal', title:'Código Produto', sort:'-x', scale:{paddingOuter:2}},
-        color: {
-          field: 'valorTotalProduto', type: 'quantitative', 
-          scale: {type:'quantize', nice:true , scheme: {name: 'blues', count: 12}}, title:'Total'
-        },
-        fillOpacity: {
-          condition: [{param: "selectBarProduto", value: 1}],
-          value: 0.6
-        },
-        strokeWidth: {
-          condition: [
-            {
-              param: "selectBarProduto",
-              empty: false,
-              value: 2
-            },
-            {
-              param: "highlightBarProduto",
-              empty: false,
-              value: 1.5
-            }
-          ],
-          value: 0
-        },
-        tooltip: [
-          {field: 'descNsm2', title: "Produto"},
-          {field: "valorTotalProduto", aggregate:'max', format:",.2f", title: "Total de Notas"}
-        ],
+        x: {field: 'valorTotalProduto', type: 'quantitative', title:'Total dos Produtos', stack: null},                
+        y: {field: 'codNcm2', type: 'nominal', title:'Código Produto', sort:'-x', scale:{paddingOuter:5}},
       },
+      layer:[{
+        params: [
+          {
+            name: "highlightBarProduto",
+            select: {type: "point", on: "pointerover"}
+          },
+          {name: "selectBarProduto", select: {type:"point", encodings:['y']}},
+        ],        
+        mark: {type:'bar', cornerRadiusEnd: 5, stroke: "black", height: 25},
+        encoding: {          
+//          x: {field: 'valorTotalProduto', aggregate:'max', type: 'quantitative', title:'Total dos Produtos', stack: null},                
+//          y: {field: 'codNcm2', type: 'nominal', title:'Código Produto', sort:'-x', scale:{paddingOuter:5}},
+          color: {
+            field: 'valorTotalProduto', type: 'quantitative', 
+            scale: {type:'quantize', nice:true , scheme: {name: 'blues', count: 10}}, title:'Total'
+          },
+          fillOpacity: {
+            condition: [{param: "selectBarProduto", value: 1}],
+            value: 0.6
+          },
+          strokeWidth: {
+            condition: [
+              {
+                param: "selectBarProduto",
+                empty: false,
+                value: 2
+              },
+              {
+                param: "highlightBarProduto",
+                empty: false,
+                value: 1.5
+              }
+            ],
+            value: 0
+          },
+          tooltip: [
+            {field: 'descNsm2', title: "Produto"},
+            {field: "valorTotalProduto", format:",.2f", title: "Total de Notas"},
+//            {field: "maxValorTotalProduto", aggregate:'max', format:",.2f", title: "Max Total de Notas"}          
+          ],
+        },        
+      },
+      {
+        mark: {
+          type: "text", 
+          baseline:"middle", 
+          fontWeight:"bold",
+          align:"left", 
+          xOffset: {expr:"isNumber(datum.xOffSet)?datum.xOffSet:5"}, 
+          aria: false
+        },
+        encoding: {
+          text: {            
+            field: "valorTotalProduto", 
+            //aggregate:"max",
+            type:"quantitative", 
+            format:".2s",
+          },
+          color:{            
+            //condition:{test:{field:"rankSegmento", lte:"3.0"}, value:'white'},
+            condition:{test:"datum.xOffSet < 0", value:'white'},
+            value:"black"
+          }
+        },
+      }      
+    ],      
       width: 350
     }    
 
@@ -223,7 +273,8 @@ export class VisaoProdutoComponent implements OnInit{
               type:'quantitative', 
               scale: {
                 type: 'quantize', 
-                scheme: {name: 'greens', count: 8}
+                nice: true,
+                scheme: {name: 'greens', count: 10}
               },
               legend: {title:'Total de NFes'}
             },

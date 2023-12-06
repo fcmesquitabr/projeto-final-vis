@@ -9,7 +9,6 @@ import {TopLevelSpec} from 'vega-lite';
 import {changeset} from 'vega'
 import { NotaDia } from 'src/util/NotaDia';
 
-
 @Component({
   selector: 'app-visao-geral',
   templateUrl: './visao-geral.component.html',
@@ -37,8 +36,13 @@ export class VisaoGeralComponent {
     
     const qtdeNotasSpec: TopLevelSpec|any = this.getSpecQtdeNotasEmitidasLineGraph();
     const totalNotasSpec: TopLevelSpec|any = this.getSpecTotalNotasEmitidasLineGraph();
-    const ufEmitenteSpec: TopLevelSpec = this.getSpecUfBarGraph("UFs Emitentes","datum.siglaUfEmit!='CE'","siglaUfEmit","dscUfEmit","UfEmit");
-    const ufDestinatarioSpec: TopLevelSpec = this.getSpecUfBarGraph("UFs Destinatárias","datum.siglaUfDest!='CE'","siglaUfDest","dscUfDest","UfDest");
+
+    let selectConditionEmit =  "(!isValid(selectBarFieldUfEmit.siglaUfEmit) || (datum.siglaUfEmit == selectBarFieldUfEmit.siglaUfEmit)) && (!isValid(selectBarFieldUfDest.siglaUfDest) || (datum.siglaUfEmit == selectBarFieldUfDest.siglaUfDest))"
+    let selectConditionDest =  "(!isValid(selectBarFieldUfDest.siglaUfDest) || (datum.siglaUfDest == selectBarFieldUfDest.siglaUfDest)) && (!isValid(selectBarFieldUfEmit.siglaUfEmit) || (datum.siglaUfDest == selectBarFieldUfEmit.siglaUfEmit))"
+    //console.log(selectCondition)
+
+    const ufEmitenteSpec: TopLevelSpec = this.getSpecUfBarGraph("UFs Emitentes","datum.siglaUfEmit!='CE'","siglaUfEmit","dscUfEmit","UfEmit", selectConditionEmit);
+    const ufDestinatarioSpec: TopLevelSpec = this.getSpecUfBarGraph("UFs Destinatárias","datum.siglaUfDest!='CE'","siglaUfDest","dscUfDest","UfDest", selectConditionDest);
 
     const spec: TopLevelSpec = {
       $schema: "https://vega.github.io/schema/vega-lite/v5.json",
@@ -249,59 +253,115 @@ export class VisaoGeralComponent {
   private getSpecUfBarGraph(
     title:string, filterSiglaUf:string,
     yField: string, tooltipDescField:string,
-    name:string,
+    name:string, selectCondition: string
   ){
+
+    let strokeWidthSelectCondition = "";
+    let strokeWidthHightLightCondition = "";
+    if (name == "UfEmit"){
+      strokeWidthSelectCondition = "(datum.siglaUfEmit == selectBarFieldUfEmit.siglaUfEmit) || (datum.siglaUfEmit == selectBarFieldUfDest.siglaUfDest)"
+      strokeWidthHightLightCondition = "(datum.siglaUfEmit == highlightBarFieldUfEmit.siglaUfEmit) || (datum.siglaUfEmit == highlightBarFieldUfDest.siglaUfDest)"
+    }else{
+      strokeWidthSelectCondition = "(datum.siglaUfDest == selectBarFieldUfDest.siglaUfDest) || (datum.siglaUfDest == selectBarFieldUfEmit.siglaUfEmit)"
+      strokeWidthHightLightCondition = "(datum.siglaUfDest == highlightBarFieldUfDest.siglaUfDest) || (datum.siglaUfDest == highlightBarFieldUfEmit.siglaUfEmit)"
+    }
 
     const barGraphSpec: TopLevelSpec = {
       $schema: "https://vega.github.io/schema/vega-lite/v5.json",
       description: 'Gráfico de Barras de UFs Emitentes/Destinatárias',
       title: title,
-      data:{
-        name: 'notaDia' + name,
-        values: this.notaDiaData
-      },
+      data:{name: 'notaDia' + name, values: this.notaDiaData},
       transform:[
+        {filter: filterSiglaUf},
         {
-          filter: filterSiglaUf 
-        }
+          joinaggregate: [{
+            op: "sum",
+            field: "valorTotal",
+            as: "valorTotalUf"
+          }],
+          groupby: [yField]
+        },
+        {
+          window: [{
+            op: "row_number",
+            as: "rowNumber"
+          }],
+          groupby:["valorTotalUf"],
+          sort:[{field: "valorTotalUf", order:'descending'}]
+        },
+        {filter: { field: 'rowNumber', equal: 1}},
+        {
+          joinaggregate: [{
+            op: "max",
+            field: "valorTotalUf",
+            as: "maxValorTotalUf"
+          }]
+        },        
+        {
+          calculate:"(datum.valorTotalUf/datum.maxValorTotalUf)>0.6?-35:5", as:"xOffSet"
+        }        
       ],
-      params: [
+      encoding:{
+        x: {field: 'valorTotalUf', type: 'quantitative', title:'Valor Total de Notas'},
+        y: {field: yField, type: 'nominal', title:'UF', sort:'-x', scale:{paddingOuter:4}}
+      },
+      layer:[
         {
-          name: "highlightBar" + name,
-          select: {type: "point", on: "pointerover"}
-        },
-        {name: "selectBar" + name, select: {type:"point", encodings:['y'], toggle: false}}
-      ],              
-      mark: {type:'bar', height: 18, cornerRadiusEnd: 5, stroke: "black"},
-      encoding: {
-        x: {field: 'valorTotal', aggregate:'sum', type: 'quantitative', title:'Valor Total de Notas'},
-        y: {field: yField, type: 'nominal', title:'UF', sort:'-x'},
-        color: {field: 'valorTotal', aggregate:'sum', type: 'quantitative', scale: {type:'quantize', nice:true, scheme: {name: 'blues', count: 10}}, title:'Total'},
-        fillOpacity: {
-          condition: {param: "selectBar"+name, value: 1},
-          value: 0.4
-        },
-        strokeWidth: {
-          condition: [
-            {
-              param: "selectBar" + name,
-              empty: false,
-              value: 1.5
+          params: [
+            {name: "highlightBar" + name, select: {type: "point", on: "pointerover"}},
+            {name: "highlightBarField" + name, select: {type: "point", on: "pointerover", fields:[yField]}},
+            {name: "selectBar" + name, select: {type:"point", encodings:['y'], toggle: false}},
+            {name: "selectBarField" + name, select: {type:"point", fields:[yField], toggle: false}}
+          ],              
+          mark: {type:'bar', height: 22, cornerRadiusEnd: 5, stroke: "black"},
+          encoding: {
+            color: {field: 'valorTotalUf', type: 'quantitative', scale: {type:'quantize', nice:true, scheme: {name: 'blues', count: 10}}, title:'Total'},
+            fillOpacity: {
+              //condition: {param: "selectBar"+name, value: 1},
+              condition:{test: selectCondition, value:1},
+              value: 0.4
             },
-            {
-              param: "highlightBar" +  name,
-              empty: false,
-              value: 1.5
-            }
-          ],
-          value: 0
+            strokeWidth: {
+              condition: [
+                //{ param: "selectBar" + name, empty: false, value: 1.5},
+                {test: strokeWidthSelectCondition, value:1.5},
+                //{ param: "highlightBar" +  name, empty: false, value: 1.5}
+                {test: strokeWidthHightLightCondition, value:1.5},
+              ],
+              value: 0
+            },
+            tooltip: [
+              {field: tooltipDescField, title: "UF"},
+              {field: "qtdeNotas", aggregate:'sum', format:",.0f", title: "Qtde de Notas"},
+              {field: "valorTotalUf", format:",.2f", title: "Valor Total"}
+            ]
+          }              
         },
-        tooltip: [
-          {field: tooltipDescField, title: "UF"},
-          {field: "qtdeNotas", aggregate:'sum', format:",.0f", title: "Qtde de Notas"},
-          {field: "valorTotal", aggregate:'sum', format:",.2f", title: "Valor Total"}
-        ]
-      },          
+        {
+          mark: {
+            type: "text", 
+            baseline:"middle", 
+            fontWeight:"bold",
+            align:"left", 
+            //xOffset: 5, 
+            xOffset: {expr:"isNumber(datum.xOffSet)?datum.xOffSet:5"},
+            aria: false
+          },
+          encoding: {
+            text: {
+              field: "valorTotalUf", 
+              //aggregate: "max",
+              type:"quantitative", 
+              format:".2s"
+            },
+            color:{
+              condition:{test:"datum.xOffSet < 0", value:'white'},
+              //condition:{test:"(datum.valorTotalSegmento/datum.maxValorTotalSegmento)>0.5", value:'white'},
+              value:"black"
+            }
+          },
+        }        
+      ],
       width: 380,
       resolve: {scale:{color:'independent'}}
     }
@@ -359,19 +419,12 @@ export class VisaoGeralComponent {
           (item:NotaDia) => (item.siglaUfEmit==items[0].values[0] || item.siglaUfDest==items[0].values[0])
         );
 
-        let ufDataFiltrado = this.ufData.filter(
-          (item:UfSegmento) => (item.siglaUfDest==items[0].values[0])
-        );
-
-        changeSetUf = changeset().insert(ufDataFiltrado).remove((item:UfSegmento)=>true);
         changeSetNotaDia = changeset().insert(notaDiaFiltrado).remove((item:NotaDia)=>true);  
 
       } else{
-        changeSetUf = changeset().insert(this.ufData).remove((item:UfSegmento)=>true);
         changeSetNotaDia = changeset().insert(this.notaDiaData).remove((item:NotaDia)=>true);  
       }
 
-      view.change('notaDiaUfDest', changeSetUf).runAsync();
       view.change('notaDiaDataQtdeNotas', changeSetNotaDia).runAsync();
       view.change('notaDiaDataValorTotal', changeSetNotaDia).runAsync();
     });    
@@ -387,19 +440,12 @@ export class VisaoGeralComponent {
           (item:NotaDia) => (item.siglaUfEmit==items[0].values[0] || item.siglaUfDest==items[0].values[0])
         );
 
-        let ufDataFiltrado = this.ufData.filter(
-          (item:UfSegmento) => (item.siglaUfEmit==items[0].values[0])
-        );
-
-        changeSetUf = changeset().insert(ufDataFiltrado).remove((item:UfSegmento)=>true);
         changeSetNotaDia = changeset().insert(notaDiaFiltrado).remove((item:NotaDia)=>true);  
 
       } else{
-        changeSetUf = changeset().insert(this.ufData).remove((item:UfSegmento)=>true);
         changeSetNotaDia = changeset().insert(this.notaDiaData).remove((item:NotaDia)=>true);  
       }
 
-      view.change('notaDiaUfEmit', changeSetUf).runAsync();
       view.change('notaDiaDataQtdeNotas', changeSetNotaDia).runAsync();
       view.change('notaDiaDataValorTotal', changeSetNotaDia).runAsync();
     });    

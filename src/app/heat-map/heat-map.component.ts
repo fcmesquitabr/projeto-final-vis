@@ -371,13 +371,15 @@ export class HeatMapComponent implements OnInit {
     let fieldRankingName: string = '';
     let filterTransform: string = '';
     let tooltipUfValueExpr: string = '"Todas"';
+    let percentualExpr: string = '';
     
     if (siglaUfSelecionada == 'Todas'){
       tooltipUfValueExpr = '"Todas"';
       if (segmentoSelecionado == 'TODOS'){
         fieldTotalName = 'valorTotalCnpj';
         fieldRankingName = 'rankingGeral';
-        filterTransform = "datum.rankingGeral<=15";        
+        filterTransform = "datum.rankingGeral<=15";  
+        percentualExpr = "datum.valorTotalCnpj"      
       } else{
         fieldTotalName = 'valorTotalCnpjSegmento';
         fieldRankingName = 'rankingSegmento';
@@ -407,47 +409,97 @@ export class HeatMapComponent implements OnInit {
         },
         {
           calculate: tooltipUfValueExpr, as:'tooltipUfValue'
-        }
-      ],
-      params: [
+        },
         {
-          name: "highlightBar",
-          select: {type: "point", on: "pointerover"}
+          window: [{
+            op: "row_number",
+            as: "rowNumber"
+          }],
+          groupby:[fieldRankingName],
+          sort:[{field: fieldTotalName, order:'descending'}]
         },
-        {name: "selectBar", select: {type:"point", encodings:['y']}}
-      ],        
-      mark: {type:'bar', height: 20, cornerRadiusEnd: 5, stroke: "black"},
+        {filter: { field: 'rowNumber', equal: 1}},
+        {
+          joinaggregate: [{
+            op: "max",
+            field: fieldTotalName,
+            as: "maxFieldTotalName"
+          }]
+        },
+        {
+          calculate:"(datum."+fieldTotalName+"/datum.maxFieldTotalName)>0.6?-35:5", as:"xOffSet"
+        }        
+      ],
       encoding: {
-        x: {field: fieldTotalName, aggregate:'max',type: 'quantitative', title:'Total de Notas Emitidas'},
-        y: {field: 'codCnpj', type: 'nominal', title:'CNPJ', sort:'-x', scale:{paddingOuter:2}},
-        color: {field: fieldTotalName, aggregate:'max', type: 'quantitative', scale: {type:'quantile', scheme: {name: 'blues', count: 10}}, title:'Total'},
-        fillOpacity: { 
-          condition: {param: "selectBar", value: 1},
-          value: 0.4
-        },
-        strokeWidth: {
-          condition: [
-            {
-              param: "selectBar",
-              empty: false,
-              value: 1.5
-            },
-            {
-              param: "highlightBar",
-              empty: false,
-              value: 1.5
-            }
-          ],
-          value: 0
-        },
-        tooltip: [
-          {field: "codCnpj", title: "CNPJ"},
-          {field: "descMunicipio", title: "Município"},
-          {field: "segmento", title: "Segmento"},
-          {field: fieldRankingName, title: "Ranking"},
-          {field: fieldTotalName, aggregate:'max',format:",.2f", title: "Valor Total Emitido"}
-        ],
+        x: {field: fieldTotalName, type: 'quantitative', title:'Total de Notas Emitidas'},
+        y: {field: 'codCnpj', type: 'nominal', title:'CNPJ', sort:'-x', scale:{paddingOuter:4}},
       },
+      layer:[
+        {
+          params: [
+            {
+              name: "highlightBar",
+              select: {type: "point", on: "pointerover"}
+            },
+            {name: "selectBar", select: {type:"point", encodings:['y']}}
+          ],    
+          mark: {type:'bar', height: 24, cornerRadiusEnd: 5, stroke: "black"},
+          encoding: {
+            color: {field: fieldTotalName, type: 'quantitative', scale: {type:'quantize', nice:true, scheme: {name: 'blues', count: 10}}, title:'Total'},
+            fillOpacity: { 
+              condition: {param: "selectBar", value: 1},
+              value: 0.4
+            },
+            strokeWidth: {
+              condition: [
+                {
+                  param: "selectBar",
+                  empty: false,
+                  value: 1.5
+                },
+                {
+                  param: "highlightBar",
+                  empty: false,
+                  value: 1.5
+                }
+              ],
+              value: 0
+            },
+            tooltip: [
+              {field: "codCnpj", title: "CNPJ"},
+              {field: "descMunicipio", title: "Município"},
+              {field: "segmento", title: "Segmento"},
+              {field: fieldRankingName, title: "Ranking"},
+              {field: fieldTotalName, format:",.2f", title: "Valor Total Emitido"}
+            ],
+          },
+        },
+        {
+          mark: {
+            type: "text", 
+            baseline:"middle", 
+            fontWeight:"bold",
+            align:"left", 
+            //xOffset: {expr:"(datum.valorTotalSegmento/datum.maxValorTotalSegmento)>0.5?-35:5"}, 
+            xOffset: {expr:"isNumber(datum.xOffSet)?datum.xOffSet:5"},
+            aria: false
+          },
+          encoding: {
+            text: {
+              field: fieldTotalName, 
+              //aggregate: 'max',
+              type:"quantitative", 
+              format:".2s",
+            },
+            color:{
+              //condition:{test:{field:"xOffSet", lt:"0"}, value:'white'},
+              //condition:{test:"(datum.valorTotalSegmento/datum.maxValorTotalSegmento)>0.5", value:'white'},
+              condition:{test:"datum.xOffSet < 0", value:'white'},
+              value:"black"
+            }
+          }  
+        }
+      ],        
       width: 700
     }
 
